@@ -1,0 +1,30 @@
+{
+  "name": "nodejs-instagram-seo",
+  "version": "1.0.0",
+  "description": "nodejs project to collect instagram data using web scrapping",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avinashkumar8694/nodejs-instagram-seo.git"
+  },
+  "author": "Avinash Kumar Gupta",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Avinashkumar8694/nodejs-instagram-seo/issues"
+  },
+  "homepage": "https://github.com/Avinashkumar8694/nodejs-instagram-seo#readme",
+  "keywords": [
+    "['instagram'",
+    "'nodejs'",
+    "'puppeteer']"
+  ],
+  "dependencies": {
+    "puppeteer": "^10.1.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "dotenv": "^10.0.0"
+  }
+}
