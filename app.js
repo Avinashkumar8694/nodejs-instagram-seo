@@ -1,5 +1,6 @@
 const puppeteer = require("puppeteer");
-
+const dotenv = require("dotenv");
+dotenv.config();
 (async () => {
   try {
     const browser = await puppeteer.launch({
@@ -12,28 +13,74 @@ const puppeteer = require("puppeteer");
       ],
     });
     const page = await browser.newPage();
-    await page.goto("https://www.instagram.com/accounts/login/");
+    await page.goto("https://www.instagram.com/accounts/login/", {
+      waitUntil: "networkidle2",
+    });
     await page.setViewport({
-      width: 1200,
+      width: 800,
       height: 800,
     });
 
+    const username = process.env.INSTAGRAM_USERNAME;
+    const password = process.env.INSTAGRAM_PASSWORD;
+
     await page.waitFor('input[name="username"]');
     await page.focus('input[name="username"]');
-    await page.keyboard.type(process.env.INSTAGRAM_USERNAME);
+    await page.keyboard.type(`${username}`);
     await page.focus('input[name="password"]');
-    await page.keyboard.type(process.env.INSTAGRAM_PASSWORD);
-    await page.click('button[type="submit"]');
-    await new Promise((r) => setTimeout(r, 5000));
+    await page.keyboard.type(`${password}`);
 
-    await page.evaluate(() => {
-      let element = document.querySelector(
-        "#react-root > div > div > section > main > div > div > div > div > button"
-      );
-      if (typeof element != "undefined" && element != null) {
-        element.click();
-      }
+    await page.click('button[type="submit"]');
+    // await new Promise((r) => setTimeout(r, 5000));
+    page.waitForNavigation({
+      waitUntil: "domcontentloaded",
     });
+
+    // await page.waitFor(8000);
+
+    // await page.evaluate(() => {
+    //   let element = document.querySelector(
+    //     "#react-root > div > div > section > main > div > div > div > div > button"
+    //   );
+    //   if (typeof element != "undefined" && element != null) {
+    //     element.click();
+    //   }
+    // });
+
+    await Promise.all([
+      page.waitForSelector("#react-root > div > div > section > main > div > div > div > div > button"),
+      page.focus("#react-root > div > div > section > main > div > div > div > div > button"),
+      page.click("#react-root > div > div > section > main > div > div > div > div > button")
+    ]);
+
+    // page.waitForNavigation({
+    //   waitUntil: 'networkidle2',
+    // })
+
+    // await page.evaluate(() => {
+    //   // let element = document.querySelector(
+    //   //   "body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm"
+    //   // );
+    //   // if (typeof element != "undefined" && element != null) {
+    //   //   element.click();
+    //   window.scrollTo(0, document.body.scrollHeight);
+    //   // }
+    // });
+    // await Promise.all([
+    //   await page.click('button[type="submit"]'),
+    //   page.waitForNavigation({
+    //     waitUntil: 'networkidle2',
+    //   }),
+    // ]);
+
+    // await page.evaluate(() => {
+    //   let element = document.querySelector(
+    //     "#react-root > div > div > section > main > div > div > div > div > button"
+    //   );
+    //   if (typeof element != "undefined" && element != null) {
+    //     element.click();
+    //   }
+    // });
 
     // function buttonClickAction(element) {
     //   if (typeof element != "undefined" && element != null) {
@@ -67,24 +114,25 @@ const puppeteer = require("puppeteer");
         }
       } catch (error) {
         console.log(error);
+        // await browser.close();
       }
     });
 
-    await page.waitForSelector("body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm")
-    await page.focus("body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm");
-    await page.click("body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm");
-    await page.evaluate(() => {
-      // let element = document.querySelector(
-      //   "body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm"
-      // );
-      // if (typeof element != "undefined" && element != null) {
-      //   element.click();
-        window.scrollTo(0, document.body.scrollHeight);
-      // }
-    });
+    // await page.waitForSelector("body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm")
+    // await page.focus("body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm");
+    // await page.click("body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm");
+    // await page.evaluate(() => {
+    //   // let element = document.querySelector(
+    //   //   "body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm"
+    //   // );
+    //   // if (typeof element != "undefined" && element != null) {
+    //   //   element.click();
+    //     window.scrollTo(0, document.body.scrollHeight);
+    //   // }
+    // });
 
     process.on("exit", closeBrowser);
-    // process.on('SIGINT',closeBrowser());
+    process.on("SIGINT", closeBrowser);
 
     async function closeBrowser() {
       console.log("Browser Closed");
@@ -92,5 +140,6 @@ const puppeteer = require("puppeteer");
     }
   } catch (error) {
     console.log(error);
+    await browser.close();
   }
 })();
