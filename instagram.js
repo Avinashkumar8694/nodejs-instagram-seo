@@ -12,6 +12,7 @@ const instagram = {
         "--allow-third-party-modules",
         "--data-reduction-proxy-http-proxies",
         "--no-sandbox",
+        "--disable-web-security"
       ],
     });
     instagram.page = await instagram.browser.newPage();
