@@ -3,7 +3,7 @@ const fs = require("fs");
 robot = require("robotjs");
 const instagram = {
   browser: null,
-  page: null,
+  page: {},
   isRoboTab: false,
 
   initialize: async () => {
@@ -17,19 +17,23 @@ const instagram = {
         "--disable-web-security",
       ],
     });
-    instagram.page = await instagram.browser.newPage();
-    // await instagram.page.setViewport({
+    await instagram.createNewTab("home");
+    // await instagram.page['home'].setViewport({
     //   width: 800,
     //   height: 800,
     // });
+  },
+
+  createNewTab: async (name) => {
+    instagram.page[name] = await instagram.browser.newPage();
   },
 
   initializeLogin: async (username, password) => {
     const cookies = fs.readFileSync("cookies.json", "utf8");
     if (cookies) {
       const deserializedCookies = JSON.parse(cookies);
-      await instagram.page.setCookie(...deserializedCookies);
-      await instagram.page.goto("https://www.instagram.com/", {
+      await instagram.page["home"].setCookie(...deserializedCookies);
+      await instagram.page["home"].goto("https://www.instagram.com/", {
         waitUntil: "networkidle0",
       });
       instagram.isRoboTab = false;
@@ -40,25 +44,28 @@ const instagram = {
   },
 
   login: async (username, password) => {
-    await instagram.page.goto("https://www.instagram.com/accounts/login/", {
-      waitUntil: "networkidle0",
-    });
-    await instagram.page.focus('input[name="username"]');
-    await instagram.page.keyboard.type(`${username}`);
-    await instagram.page.focus('input[name="password"]');
-    await instagram.page.keyboard.type(`${password}`);
+    await instagram.page["home"].goto(
+      "https://www.instagram.com/accounts/login/",
+      {
+        waitUntil: "networkidle0",
+      }
+    );
+    await instagram.page["home"].focus('input[name="username"]');
+    await instagram.page["home"].keyboard.type(`${username}`);
+    await instagram.page["home"].focus('input[name="password"]');
+    await instagram.page["home"].keyboard.type(`${password}`);
     await Promise.all([
-      await instagram.page.click('button[type="submit"]'),
-      instagram.page.waitForNavigation({ waitUntil: "load" }),
+      await instagram.page["home"].click('button[type="submit"]'),
+      instagram.page["home"].waitForNavigation({ waitUntil: "load" }),
     ]);
     await new Promise((r) => setTimeout(r, 5000));
-    const cookies = await instagram.page.cookies();
+    const cookies = await instagram.page["home"].cookies();
     const cookieJson = JSON.stringify(cookies);
     fs.writeFileSync("cookies.json", cookieJson);
   },
 
-  collectInstaPost: async () => {
-    instagram.page.on("response", async (response) => {
+  collectInstaPost: async (tabName = "home") => {
+    instagram.page[tabName].on("response", async (response) => {
       let reqst = response.request();
       const resourceType = reqst.resourceType();
       if (resourceType == "xhr") {
@@ -76,9 +83,9 @@ const instagram = {
                 textBody.data.user.edge_web_feed_timeline.page_info
                   .has_next_page
               ) {
-                instagram.scrollPageToBottom();
+                instagram.scrollPageToBottom(tabName);
               } else {
-                instagram.close();
+                instagram.page[tabName].close();
               }
             }
           },
@@ -90,17 +97,29 @@ const instagram = {
     });
   },
 
+  getPostByTag: async () => {
+    await instagram.createNewTab("hashtag");
+    await instagram.page["hashtag"].goto(
+      `https://www.instagram.com/explore/tags/gadgets/`,
+      {
+        waitUntil: "networkidle0",
+      }
+    );
+    await instagram.collectInstaPost('hashtag');
+    instagram.scrollPageToBottom('hashtag');
+  },
+
   skipConfirmationWindow: async () => {
     if (instagram.isRoboTab) {
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
-      await instagram.page.waitForNavigation();
+      await instagram.page["home"].waitForNavigation();
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
+      instagram.scrollPageToBottom('home');
     }
-    instagram.scrollPageToBottom();
   },
 
   close: async () => {
@@ -108,9 +127,9 @@ const instagram = {
     instagram.browser.close();
   },
 
-  scrollPageToBottom: async () => {
+  scrollPageToBottom: async (tabName) => {
     setTimeout(() => {
-      instagram.page.evaluate(() =>
+      instagram.page[tabName].evaluate(() =>
         window.scrollTo(0, document.body.scrollHeight)
       );
     }, 350);
@@ -118,8 +137,8 @@ const instagram = {
   instagramLogout: async () => {
     const profileIcon =
       "#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg > div > div:nth-child(5) > span > img";
-    await instagram.page.focus(`${profileIcon}`);
-    await instagram.page.click(`${profileIcon}`);
+    await instagram.page["home"].focus(`${profileIcon}`);
+    await instagram.page["home"].click(`${profileIcon}`);
   },
 };
 
