@@ -1,8 +1,10 @@
 const puppeteer = require("puppeteer");
+const fs = require("fs");
 robot = require("robotjs");
 const instagram = {
   browser: null,
   page: null,
+  isRoboTab: false,
 
   initialize: async () => {
     instagram.browser = await puppeteer.launch({
@@ -12,14 +14,29 @@ const instagram = {
         "--allow-third-party-modules",
         "--data-reduction-proxy-http-proxies",
         "--no-sandbox",
-        "--disable-web-security"
+        "--disable-web-security",
       ],
     });
     instagram.page = await instagram.browser.newPage();
-    await instagram.page.setViewport({
-      width: 800,
-      height: 800,
-    });
+    // await instagram.page.setViewport({
+    //   width: 800,
+    //   height: 800,
+    // });
+  },
+
+  initializeLogin: async (username, password) => {
+    const cookies = fs.readFileSync("cookies.json", "utf8");
+    if (cookies) {
+      const deserializedCookies = JSON.parse(cookies);
+      await instagram.page.setCookie(...deserializedCookies);
+      await instagram.page.goto("https://www.instagram.com/", {
+        waitUntil: "networkidle0",
+      });
+      instagram.isRoboTab = false;
+    } else {
+      instagram.isRoboTab = true;
+      await instagram.login(username, password);
+    }
   },
 
   login: async (username, password) => {
@@ -35,45 +52,54 @@ const instagram = {
       instagram.page.waitForNavigation({ waitUntil: "load" }),
     ]);
     await new Promise((r) => setTimeout(r, 5000));
+    const cookies = await instagram.page.cookies();
+    const cookieJson = JSON.stringify(cookies);
+    fs.writeFileSync("cookies.json", cookieJson);
   },
 
   collectInstaPost: async () => {
     instagram.page.on("response", async (response) => {
-        let reqst = response.request();
-        const resourceType = reqst.resourceType();
-        if (resourceType == "xhr") {
-            response.text().then(function (responseData) {
-              let textBody = JSON.parse(responseData);
+      let reqst = response.request();
+      const resourceType = reqst.resourceType();
+      if (resourceType == "xhr") {
+        response.text().then(
+          function (responseData) {
+            let textBody = JSON.parse(responseData);
+            if (
+              textBody.data &&
+              textBody.data.user &&
+              textBody.data.user.edge_web_feed_timeline &&
+              textBody.data.user.edge_web_feed_timeline.page_info.has_next_page
+            ) {
+              console.log(JSON.stringify(textBody));
               if (
-                textBody.data &&
-                textBody.data.user &&
-                textBody.data.user.edge_web_feed_timeline &&
-                textBody.data.user.edge_web_feed_timeline.page_info.has_next_page
+                textBody.data.user.edge_web_feed_timeline.page_info
+                  .has_next_page
               ) {
-                console.log(JSON.stringify(textBody));
-                if (
-                  textBody.data.user.edge_web_feed_timeline.page_info.has_next_page
-                ) {
-                  instagram.scrollPageToBottom();
-                } else {
-                  instagram.close();
-                }
+                instagram.scrollPageToBottom();
+              } else {
+                instagram.close();
               }
-            }, err => {
-              console.log(err);
-            });
-        }
+            }
+          },
+          (err) => {
+            console.log(err);
+          }
+        );
+      }
     });
   },
 
   skipConfirmationWindow: async () => {
-    robot.keyTap("tab");
-    robot.keyTap("tab");
-    robot.keyTap("enter");
-    await instagram.page.waitForNavigation()
-    robot.keyTap("tab");
-    robot.keyTap("tab");
-    robot.keyTap("enter");
+    if (instagram.isRoboTab) {
+      robot.keyTap("tab");
+      robot.keyTap("tab");
+      robot.keyTap("enter");
+      await instagram.page.waitForNavigation();
+      robot.keyTap("tab");
+      robot.keyTap("tab");
+      robot.keyTap("enter");
+    }
     instagram.scrollPageToBottom();
   },
 

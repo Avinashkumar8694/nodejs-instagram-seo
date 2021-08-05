@@ -7,7 +7,7 @@ const password = process.env.INSTAGRAM_PASSWORD;
 (async () => {
   try {
     await instagram.initialize();
-    await instagram.login(username, password);
+    await instagram.initializeLogin(username, password);
     await instagram.skipConfirmationWindow();
     await instagram.collectInstaPost();
     process.on("exit", instagram.close);
