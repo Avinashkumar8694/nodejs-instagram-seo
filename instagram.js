@@ -18,10 +18,10 @@ const instagram = {
       ],
     });
     await instagram.createNewTab("home");
-    // await instagram.page['home'].setViewport({
-    //   width: 800,
-    //   height: 800,
-    // });
+    await instagram.page['home'].setViewport({
+      width: 1200,
+      height: 800,
+    });
   },
 
   createNewTab: async (name) => {
@@ -72,17 +72,9 @@ const instagram = {
         response.text().then(
           function (responseData) {
             let textBody = JSON.parse(responseData);
-            if (
-              textBody.data &&
-              textBody.data.user &&
-              textBody.data.user.edge_web_feed_timeline &&
-              textBody.data.user.edge_web_feed_timeline.page_info.has_next_page
-            ) {
+            if (instagram.isValidHttpResponse(textBody)) {
               console.log(JSON.stringify(textBody));
-              if (
-                textBody.data.user.edge_web_feed_timeline.page_info
-                  .has_next_page
-              ) {
+              if (instagram.hasNextPage(textBody)) {
                 instagram.scrollPageToBottom(tabName);
               } else {
                 instagram.page[tabName].close();
@@ -97,16 +89,33 @@ const instagram = {
     });
   },
 
+  isValidHttpResponse(textBody) {
+    return (
+      (textBody.data &&
+        textBody.data.user &&
+        textBody.data.user.edge_web_feed_timeline &&
+        textBody.data.user.edge_web_feed_timeline.page_info.has_next_page) ||
+      (textBody && textBody.sections)
+    );
+  },
+
+  hasNextPage(textBody) {
+    return (
+      textBody?.data?.user?.edge_web_feed_timeline?.page_info.has_next_page ||
+      textBody.more_available
+    );
+  },
+
   getPostByTag: async () => {
     await instagram.createNewTab("hashtag");
+    await instagram.collectInstaPost("hashtag");
     await instagram.page["hashtag"].goto(
       `https://www.instagram.com/explore/tags/gadgets/`,
       {
         waitUntil: "networkidle0",
       }
     );
-    await instagram.collectInstaPost('hashtag');
-    instagram.scrollPageToBottom('hashtag');
+    instagram.scrollPageToBottom("hashtag");
   },
 
   skipConfirmationWindow: async () => {
@@ -118,23 +127,27 @@ const instagram = {
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
-      instagram.scrollPageToBottom('home');
+      instagram.scrollPageToBottom("home");
     }
   },
 
   close: async () => {
-    instagram.instagramLogout();
+    instagram.page.array.forEach(element => {
+      element.close();
+    });
     instagram.browser.close();
   },
 
   scrollPageToBottom: async (tabName) => {
+    // TODO fix autoscroll
     setTimeout(() => {
       instagram.page[tabName].evaluate(() =>
-        window.scrollTo(0, document.body.scrollHeight)
+        window.scrollTo(0, document.body?.scrollHeight)
       );
     }, 350);
   },
   instagramLogout: async () => {
+    // TODO fix logout
     const profileIcon =
       "#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg > div > div:nth-child(5) > span > img";
     await instagram.page["home"].focus(`${profileIcon}`);
