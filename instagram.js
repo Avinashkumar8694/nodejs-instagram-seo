@@ -74,7 +74,7 @@ const instagram = {
           function (responseData) {
             let textBody = JSON.parse(responseData);
             if (instagram.isValidHttpResponse(textBody)) {
-              console.log(JSON.stringify(textBody));
+              // console.log(JSON.stringify(textBody));
               if (instagram.hasNextPage(textBody)) {
                 instagram.scrollPageToBottom(`${tabName}`, true);
               } else {
@@ -86,7 +86,9 @@ const instagram = {
           (err) => {
             console.log(err);
           }
-        );
+        ).catch(err =>{
+          console.log(error)
+        });
       }
     });
   },
@@ -113,11 +115,9 @@ const instagram = {
     await instagram.collectInstaPost("hashtag");
     await instagram.page["hashtag"].goto(
       `https://www.instagram.com/explore/tags/${hashtag}/`,
-      {
-        waitUntil: "networkidle0",
-      }
     );
     await instagram.skipConfirmationWindow("hashtag");
+    await new Promise((r) => setTimeout(r, 5000));
     instagram.scrollPageToBottom("hashtag", true);
   },
 
@@ -154,7 +154,6 @@ const instagram = {
   },
 
   scrollPageToBottom: (tabName, scroll) => {
-    // TODO fix autoscroll
     try {
       clearInterval(instagram.interval[tabName]);
       instagram.interval[tabName] = setInterval(() => {
