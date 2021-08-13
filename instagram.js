@@ -15,7 +15,7 @@ const instagram = {
         "--allow-third-party-modules",
         "--data-reduction-proxy-http-proxies",
         "--no-sandbox",
-        "--disable-web-security"
+        "--disable-web-security",
       ],
     });
     await instagram.createNewTab("home");
@@ -70,27 +70,34 @@ const instagram = {
       let reqst = response.request();
       const resourceType = reqst.resourceType();
       if (resourceType == "xhr") {
-        response.text().then(
-          function (responseData) {
-            let textBody = JSON.parse(responseData);
-            if (instagram.isValidHttpResponse(textBody)) {
-              // console.log(JSON.stringify(textBody));
-              if (instagram.hasNextPage(textBody)) {
-                instagram.scrollPageToBottom(`${tabName}`, true);
-              } else {
-                instagram.scrollPageToBottom(`${tabName}`, false);
-                instagram.page[tabName].close();
+        response
+          .text()
+          .then(
+            async function (responseData) {
+              let textBody = JSON.parse(responseData);
+              if (instagram.isValidHttpResponse(textBody)) {
+                await instagram.storeData(textBody);
+                if (instagram.hasNextPage(textBody)) {
+                  instagram.scrollPageToBottom(`${tabName}`, true);
+                } else {
+                  instagram.scrollPageToBottom(`${tabName}`, false);
+                  instagram.page[tabName].close();
+                }
               }
+            },
+            (err) => {
+              console.log(err);
             }
-          },
-          (err) => {
-            console.log(err);
-          }
-        ).catch(err =>{
-          console.log(error)
-        });
+          )
+          .catch((err) => {
+            console.log(error);
+          });
       }
     });
+  },
+
+  storeData : async (textBody) => {
+    console.log(JSON.stringify(textBody));
   },
 
   isValidHttpResponse(textBody) {
@@ -114,7 +121,7 @@ const instagram = {
     await instagram.createNewTab("hashtag");
     await instagram.collectInstaPost("hashtag");
     await instagram.page["hashtag"].goto(
-      `https://www.instagram.com/explore/tags/${hashtag}/`,
+      `https://www.instagram.com/explore/tags/${hashtag}/`
     );
     await instagram.skipConfirmationWindow("hashtag");
     await new Promise((r) => setTimeout(r, 5000));
@@ -147,10 +154,10 @@ const instagram = {
   },
 
   close: async () => {
-    instagram.page.array.forEach((element) => {
-      element.close();
+    Object.keys(instagram.page).forEach(async (el) => {
+      await instagram.page[el].close();
     });
-    instagram.browser.close();
+    await instagram.browser.close();
   },
 
   scrollPageToBottom: (tabName, scroll) => {
@@ -158,7 +165,7 @@ const instagram = {
       clearInterval(instagram.interval[tabName]);
       instagram.interval[tabName] = setInterval(() => {
         instagram.page[tabName].evaluate(() => {
-            window.scrollTo(0, document.body?.scrollHeight);
+          window.scrollTo(0, document.body?.scrollHeight);
         });
       }, 1000);
       if (!scroll) {
