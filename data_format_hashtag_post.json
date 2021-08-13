@@ -1,0 +1,30 @@
+{
+    "source": "instagram",
+    "post": {
+        "id": {
+            "id": "post is (ie: 2632054607224081461)",
+            "display_url": "display_url",
+            "is_video": "true/false",
+            "video_url": "video_url",
+            "has_audio": "true/false",
+            "title": "",
+            "product_type": "feed",
+            "video_view_count": "video_view_count",
+            "hashTag": [
+                "collect hashtag from 'edge_media_to_caption' Array or from 'accessibility_caption'"
+            ],
+            "media_preview_comment_count": "total comments",
+            "taken_at_timestamp": 1627985386,
+            "media_preview_like_count": "like count",
+            "viewer_can_reshare": "true/false",
+            "owner": {
+                "id": "ssdsdsdsd",
+                "username": "username",
+                "profile_pic_url": "profile pic",
+                "full_name": "full name",
+                "is_private": false
+            },
+            "shortcode": "shortcode"
+        }
+    }
+}
