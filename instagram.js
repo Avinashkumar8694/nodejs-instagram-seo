@@ -5,6 +5,7 @@ const instagram = {
   browser: null,
   page: {},
   isRoboTab: false,
+  interval: {},
 
   initialize: async () => {
     instagram.browser = await puppeteer.launch({
@@ -14,12 +15,12 @@ const instagram = {
         "--allow-third-party-modules",
         "--data-reduction-proxy-http-proxies",
         "--no-sandbox",
-        "--disable-web-security",
+        "--disable-web-security"
       ],
     });
     await instagram.createNewTab("home");
-    await instagram.page['home'].setViewport({
-      width: 1200,
+    await instagram.page["home"].setViewport({
+      width: 800,
       height: 800,
     });
   },
@@ -31,12 +32,12 @@ const instagram = {
   initializeLogin: async (username, password) => {
     const cookies = fs.readFileSync("cookies.json", "utf8");
     if (cookies) {
+      instagram.isRoboTab = false;
       const deserializedCookies = JSON.parse(cookies);
       await instagram.page["home"].setCookie(...deserializedCookies);
       await instagram.page["home"].goto("https://www.instagram.com/", {
         waitUntil: "networkidle0",
       });
-      instagram.isRoboTab = false;
     } else {
       instagram.isRoboTab = true;
       await instagram.login(username, password);
@@ -75,8 +76,9 @@ const instagram = {
             if (instagram.isValidHttpResponse(textBody)) {
               console.log(JSON.stringify(textBody));
               if (instagram.hasNextPage(textBody)) {
-                instagram.scrollPageToBottom(tabName);
+                instagram.scrollPageToBottom(`${tabName}`, true);
               } else {
+                instagram.scrollPageToBottom(`${tabName}`, false);
                 instagram.page[tabName].close();
               }
             }
@@ -106,45 +108,66 @@ const instagram = {
     );
   },
 
-  getPostByTag: async () => {
+  getPostByTag: async (hashtag) => {
     await instagram.createNewTab("hashtag");
     await instagram.collectInstaPost("hashtag");
     await instagram.page["hashtag"].goto(
-      `https://www.instagram.com/explore/tags/gadgets/`,
+      `https://www.instagram.com/explore/tags/${hashtag}/`,
       {
         waitUntil: "networkidle0",
       }
     );
-    instagram.scrollPageToBottom("hashtag");
+    await instagram.skipConfirmationWindow("hashtag");
+    instagram.scrollPageToBottom("hashtag", true);
   },
 
-  skipConfirmationWindow: async () => {
+  getPostData: async () => {
+    await instagram.collectInstaPost("home");
+    instagram.scrollPageToBottom("home", true);
+  },
+
+  skipConfirmationWindow: async (tabName = "home") => {
     if (instagram.isRoboTab) {
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
-      await instagram.page["home"].waitForNavigation();
+      await instagram.page[tabName].waitForNavigation();
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
-      instagram.scrollPageToBottom("home");
+    } else {
+      if (tabName == "home") {
+        robot.keyTap("tab");
+        robot.keyTap("tab");
+        robot.keyTap("tab");
+        robot.keyTap("tab");
+        robot.keyTap("enter");
+      }
     }
   },
 
   close: async () => {
-    instagram.page.array.forEach(element => {
+    instagram.page.array.forEach((element) => {
       element.close();
     });
     instagram.browser.close();
   },
 
-  scrollPageToBottom: async (tabName) => {
+  scrollPageToBottom: (tabName, scroll) => {
     // TODO fix autoscroll
-    setTimeout(() => {
-      instagram.page[tabName].evaluate(() =>
-        window.scrollTo(0, document.body?.scrollHeight)
-      );
-    }, 350);
+    try {
+      clearInterval(instagram.interval[tabName]);
+      instagram.interval[tabName] = setInterval(() => {
+        instagram.page[tabName].evaluate(() => {
+            window.scrollTo(0, document.body?.scrollHeight);
+        });
+      }, 1000);
+      if (!scroll) {
+        clearInterval(instagram.interval[tabName]);
+      }
+    } catch (err) {
+      console.log(err);
+    }
   },
   instagramLogout: async () => {
     // TODO fix logout

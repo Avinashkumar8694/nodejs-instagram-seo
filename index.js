@@ -1,6 +1,6 @@
 const dotenv = require("dotenv");
 const instagram = require("./instagram");
-const parseArgs = require('minimist')
+const parseArgs = require("minimist");
 dotenv.config();
 const username = process.env.INSTAGRAM_USERNAME;
 const password = process.env.INSTAGRAM_PASSWORD;
@@ -10,19 +10,20 @@ const password = process.env.INSTAGRAM_PASSWORD;
     await instagram.initialize();
     await instagram.initializeLogin(username, password);
     await instagram.skipConfirmationWindow();
-    switch (args.type) {
+    switch (Object.keys(args)[1]) {
       case "post":
-        await instagram.collectInstaPost();
+        await instagram.getPostData();
         break;
       case "hashtag":
-        await instagram.getPostByTag();
+        await instagram.getPostByTag('gadgets');
         break;
       default:
         console.log("invalid option");
     }
-    console.log(args);
-    process.on("exit", async() => {
-     await instagram.close();
+    // console.log(args);
+    process.on("beforeExit", async () => {
+      await instagram.browser.close();
+      //  await instagram.close();
     });
   } catch (error) {
     console.log(error);

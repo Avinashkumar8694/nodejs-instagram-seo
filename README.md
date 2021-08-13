@@ -7,5 +7,6 @@
 - create .env file at root folder.
 - Add INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variable in .env file.
 - initilize the app using __npm i__
-- run the app using __npm start > log.json__
+- run the app using __node index.js --post/--hashtag > log.json__
+- use __--post__ to get posts from instagram homepage and __--hashtag__ to get post by hashtag
 - data will be available in log.json file at root folder.
