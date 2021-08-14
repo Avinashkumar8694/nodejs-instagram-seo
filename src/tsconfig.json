@@ -1,7 +1,7 @@
 {
     "version": "2.4.2",
     "compilerOptions": {
-        "outDir": "./build1",
+        "outDir": "./build",
         "lib": [
             "es5",
             "es6",
@@ -12,13 +12,14 @@
         "moduleResolution": "node",
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "sourceMap": false,
+        "sourceMap": true,
         "resolveJsonModule": true
     },
     "exclude": [
         
     ],
     "include":[
+        "*",
         "node_modules/@types/puppeteer/index.d.ts"
     ]
 }
