@@ -1,5 +1,5 @@
 const dotenv = require("dotenv");
-const instagram = require("./instagram");
+const instagram = require("./sd-services/instagram_js");
 const parseArgs = require("minimist");
 dotenv.config();
 const username = process.env.INSTAGRAM_USERNAME;
