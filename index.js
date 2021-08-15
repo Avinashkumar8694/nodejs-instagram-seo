@@ -19,13 +19,14 @@ const password = process.env.INSTAGRAM_PASSWORD;
         break;
       default:
         console.log("invalid option");
+        // await instagramInst.close();
     }
     process.on("beforeExit", async () => {
       console.log("beforeExit event")
       await instagramInst.close();
     });
-    process.on("exit", async () => {
-      console.log("exit event")
-      await instagramInst.close();
-    });
-  })().catch(err => console.error(err));
+    // process.on("exit", async () => {
+    //   console.log("exit event")
+    //   await instagramInst.close();
+    // });
+  })().catch(err => {});

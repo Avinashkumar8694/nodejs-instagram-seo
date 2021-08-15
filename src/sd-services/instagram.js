@@ -84,11 +84,14 @@ module.exports = class Instagram {
       const url = response.url();
       if (resourceType == "xhr") {
         if (this.isAcceptable(url)) {
-          response
-            .text()
-            .then(
-              async function (responseData) {
+          try {
+            response
+              .text()
+              .then(async function (responseData) {
                 let textBody = JSON.parse(responseData);
+                if(textBody && textBody.sections){
+                  console.log(textBody)
+                }
                 if (_that.isValidHttpResponse(textBody)) {
                   if (_that.instagram.interval[tabName])
                     clearInterval(_that.instagram.interval[tabName]);
@@ -100,14 +103,9 @@ module.exports = class Instagram {
                     _that.instagram.page[tabName].close();
                   }
                 }
-              },
-              (err) => {
-                console.log(err);
-              }
-            )
-            .catch((err) => {
-              console.log(err);
-            });
+              })
+              .catch((err) => { });
+          } catch (err) {}
         }
       }
     });
@@ -118,10 +116,14 @@ module.exports = class Instagram {
   }
 
   async storeData(textBody) {
-      // console.log(JSON.stringify(textBody));
-      for(let i = 0; i< 1000; i++){console.log(i)}
+    // console.log(JSON.stringify(textBody))
+    const filteredData = this.filtereData(textBody);
+    fs.writeFileSync("log.json", JSON.stringify(textBody), {flag: 'a'});
   }
 
+  filtereData(textBody){
+
+  }
   isValidHttpResponse(textBody) {
     return (
       (textBody.data &&
@@ -176,11 +178,15 @@ module.exports = class Instagram {
   }
 
   async close() {
-    if (this.instagram.interval["home"])
-      clearInterval(this.instagram.interval["home"]);
-    if (this.instagram.interval["hashtag"])
-      clearInterval(this.instagram.interval["hashtag"]);
-    await this.instagram.browser.close();
+    try{
+      if (this.instagram.interval["home"])
+        clearInterval(this.instagram.interval["home"]);
+      if (this.instagram.interval["hashtag"])
+        clearInterval(this.instagram.interval["hashtag"]);
+      await this.instagram.browser.close();
+    } catch(error){
+      console.log(error)
+    }
   }
 
   scrollPageToBottom(tabName, scroll) {
