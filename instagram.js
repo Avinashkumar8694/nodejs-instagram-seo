@@ -1,14 +1,24 @@
 const puppeteer = require("puppeteer");
-const fs = require("fs");
+const fs = require("fs-extra");
 robot = require("robotjs");
-const instagram = {
-  browser: null,
-  page: {},
-  isRoboTab: false,
-  interval: {},
+let instagramInstance = null;
+module.exports = class Instagram {
+  instagram = {
+    browser: null,
+    page: {},
+    isRoboTab: false,
+    interval: {},
+  };
 
-  initialize: async () => {
-    instagram.browser = await puppeteer.launch({
+  static getinstance() {
+    if (!instagramInstance) {
+      instagramInstance = new Instagram();
+    }
+    return instagramInstance;
+  }
+
+  async initialize() {
+    this.instagram.browser = await puppeteer.launch({
       headless: false,
       args: [
         "--allow-external-pages",
@@ -18,87 +28,99 @@ const instagram = {
         "--disable-web-security",
       ],
     });
-    await instagram.createNewTab("home");
-    await instagram.page["home"].setViewport({
+    await this.createNewTab("home");
+    await this.instagram.page["home"].setViewport({
       width: 800,
       height: 800,
     });
-  },
+  }
 
-  createNewTab: async (name) => {
-    instagram.page[name] = await instagram.browser.newPage();
-  },
+  async createNewTab(name) {
+    this.instagram.page[name] = await this.instagram.browser.newPage();
+  }
 
-  initializeLogin: async (username, password) => {
+  async initializeLogin(username, password) {
+    fs.ensureFileSync("cookies.json");
     const cookies = fs.readFileSync("cookies.json", "utf8");
     if (cookies) {
-      instagram.isRoboTab = false;
+      this.instagram.isRoboTab = false;
       const deserializedCookies = JSON.parse(cookies);
-      await instagram.page["home"].setCookie(...deserializedCookies);
-      await instagram.page["home"].goto("https://www.instagram.com/", {
+      await this.instagram.page["home"].setCookie(...deserializedCookies);
+      await this.instagram.page["home"].goto("https://www.instagram.com/", {
         waitUntil: "networkidle0",
       });
     } else {
-      instagram.isRoboTab = true;
-      await instagram.login(username, password);
+      this.instagram.isRoboTab = true;
+      await this.login(username, password);
     }
-  },
+  }
 
-  login: async (username, password) => {
-    await instagram.page["home"].goto(
+  async login(username, password) {
+    await this.instagram.page["home"].goto(
       "https://www.instagram.com/accounts/login/",
       {
         waitUntil: "networkidle0",
       }
     );
-    await instagram.page["home"].focus('input[name="username"]');
-    await instagram.page["home"].keyboard.type(`${username}`);
-    await instagram.page["home"].focus('input[name="password"]');
-    await instagram.page["home"].keyboard.type(`${password}`);
+    await this.instagram.page["home"].focus('input[name="username"]');
+    await this.instagram.page["home"].keyboard.type(`${username}`);
+    await this.instagram.page["home"].focus('input[name="password"]');
+    await this.instagram.page["home"].keyboard.type(`${password}`);
     await Promise.all([
-      await instagram.page["home"].click('button[type="submit"]'),
-      instagram.page["home"].waitForNavigation({ waitUntil: "load" }),
+      await this.instagram.page["home"].click('button[type="submit"]'),
+      this.instagram.page["home"].waitForNavigation({ waitUntil: "load" }),
     ]);
     await new Promise((r) => setTimeout(r, 5000));
-    const cookies = await instagram.page["home"].cookies();
+    const cookies = await this.instagram.page["home"].cookies();
     const cookieJson = JSON.stringify(cookies);
     fs.writeFileSync("cookies.json", cookieJson);
-  },
+  }
 
-  collectInstaPost: async (tabName = "home") => {
-    instagram.page[tabName].on("response", async (response) => {
+  async collectInstaPost(tabName = "home") {
+    const _that = this;
+    this.instagram.page[tabName].on("response", async (response) => {
       let reqst = response.request();
       const resourceType = reqst.resourceType();
+      const url = response.url();
       if (resourceType == "xhr") {
-        response
-          .text()
-          .then(
-            async function (responseData) {
-              let textBody = JSON.parse(responseData);
-              if (instagram.isValidHttpResponse(textBody)) {
-                await instagram.storeData(textBody);
-                if (instagram.hasNextPage(textBody)) {
-                  instagram.scrollPageToBottom(`${tabName}`, true);
-                } else {
-                  instagram.scrollPageToBottom(`${tabName}`, false);
-                  instagram.page[tabName].close();
+        if (this.isAcceptable(url)) {
+          response
+            .text()
+            .then(
+              async function (responseData) {
+                let textBody = JSON.parse(responseData);
+                if (_that.isValidHttpResponse(textBody)) {
+                  if (_that.instagram.interval[tabName])
+                    clearInterval(_that.instagram.interval[tabName]);
+                  await _that.storeData(textBody);
+                  if (_that.hasNextPage(textBody)) {
+                    _that.scrollPageToBottom(`${tabName}`, true);
+                  } else {
+                    _that.scrollPageToBottom(`${tabName}`, false);
+                    _that.instagram.page[tabName].close();
+                  }
                 }
+              },
+              (err) => {
+                console.log(err);
               }
-            },
-            (err) => {
+            )
+            .catch((err) => {
               console.log(err);
-            }
-          )
-          .catch((err) => {
-            console.log(error);
-          });
+            });
+        }
       }
     });
-  },
+  }
 
-  storeData : async (textBody) => {
-    console.log(JSON.stringify(textBody));
-  },
+  isAcceptable(url) {
+    return url.includes("?query_hash") || url.includes("/v1/tags/");
+  }
+
+  async storeData(textBody) {
+      // console.log(JSON.stringify(textBody));
+      for(let i = 0; i< 1000; i++){console.log(i)}
+  }
 
   isValidHttpResponse(textBody) {
     return (
@@ -108,37 +130,37 @@ const instagram = {
         textBody.data.user.edge_web_feed_timeline.page_info.has_next_page) ||
       (textBody && textBody.sections)
     );
-  },
+  }
 
   hasNextPage(textBody) {
     return (
       textBody?.data?.user?.edge_web_feed_timeline?.page_info.has_next_page ||
       textBody.more_available
     );
-  },
+  }
 
-  getPostByTag: async (hashtag) => {
-    await instagram.createNewTab("hashtag");
-    await instagram.collectInstaPost("hashtag");
-    await instagram.page["hashtag"].goto(
+  async getPostByTag(hashtag) {
+    await this.createNewTab("hashtag");
+    await this.collectInstaPost("hashtag");
+    await this.instagram.page["hashtag"].goto(
       `https://www.instagram.com/explore/tags/${hashtag}/`
     );
-    await instagram.skipConfirmationWindow("hashtag");
+    await this.skipConfirmationWindow("hashtag");
     await new Promise((r) => setTimeout(r, 5000));
-    instagram.scrollPageToBottom("hashtag", true);
-  },
+    this.scrollPageToBottom("hashtag", true);
+  }
 
-  getPostData: async () => {
-    await instagram.collectInstaPost("home");
-    instagram.scrollPageToBottom("home", true);
-  },
+  async getPostData() {
+    await this.collectInstaPost("home");
+    this.scrollPageToBottom("home", true);
+  }
 
-  skipConfirmationWindow: async (tabName = "home") => {
-    if (instagram.isRoboTab) {
+  async skipConfirmationWindow(tabName = "home") {
+    if (this.instagram.isRoboTab) {
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
-      await instagram.page[tabName].waitForNavigation();
+      await this.instagram.page[tabName].waitForNavigation();
       robot.keyTap("tab");
       robot.keyTap("tab");
       robot.keyTap("enter");
@@ -151,37 +173,39 @@ const instagram = {
         robot.keyTap("enter");
       }
     }
-  },
+  }
 
-  close: async () => {
-    Object.keys(instagram.page).forEach(async (el) => {
-      await instagram.page[el].close();
-    });
-    await instagram.browser.close();
-  },
+  async close() {
+    if (this.instagram.interval["home"])
+      clearInterval(this.instagram.interval["home"]);
+    if (this.instagram.interval["hashtag"])
+      clearInterval(this.instagram.interval["hashtag"]);
+    await this.instagram.browser.close();
+  }
 
-  scrollPageToBottom: (tabName, scroll) => {
+  scrollPageToBottom(tabName, scroll) {
     try {
-      clearInterval(instagram.interval[tabName]);
-      instagram.interval[tabName] = setInterval(() => {
-        instagram.page[tabName].evaluate(() => {
+      const _that = this;
+      if (_that.instagram.interval[tabName])
+        clearInterval(_that.instagram.interval[tabName]);
+      _that.instagram.interval[tabName] = setInterval(() => {
+        _that.instagram.page[tabName].evaluate(() => {
           window.scrollTo(0, document.body?.scrollHeight);
         });
       }, 1000);
       if (!scroll) {
-        clearInterval(instagram.interval[tabName]);
+        clearInterval(_that.instagram.interval[tabName]);
       }
     } catch (err) {
       console.log(err);
     }
-  },
-  instagramLogout: async () => {
+  }
+
+  async instagramLogout() {
     // TODO fix logout
     const profileIcon =
       "#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg > div > div:nth-child(5) > span > img";
     await instagram.page["home"].focus(`${profileIcon}`);
     await instagram.page["home"].click(`${profileIcon}`);
-  },
+  }
 };
-
-module.exports = instagram;
