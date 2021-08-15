@@ -1,4 +1,5 @@
 build
+environments
 # Logs
 logs
 *.log

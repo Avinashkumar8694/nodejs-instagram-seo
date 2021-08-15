@@ -12,14 +12,10 @@
         "moduleResolution": "node",
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "sourceMap": true,
+        "sourceMap": false,
         "resolveJsonModule": true
     },
     "exclude": [
-        
-    ],
-    "include":[
-        "*",
-        "node_modules/@types/puppeteer/index.d.ts"
+        "node_modules"
     ]
 }
