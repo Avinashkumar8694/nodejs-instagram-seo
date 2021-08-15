@@ -4,7 +4,8 @@
   "description": "nodejs project to collect instagram data using web scrapping",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "collect:post": "node index.js --post"
   },
   "repository": {
     "type": "git",

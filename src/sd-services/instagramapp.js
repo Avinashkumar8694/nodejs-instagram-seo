@@ -1,5 +1,5 @@
 const puppeteer = require("puppeteer");
-const fs = require("fs");
+const fs = require("fs-extra");
 robot = require("robotjs");
 const instagram = {
   browser: null,
@@ -30,6 +30,7 @@ const instagram = {
   },
 
   initializeLogin: async (username, password) => {
+    fs.ensureFileSync("cookies.json");
     const cookies = fs.readFileSync("cookies.json", "utf8");
     if (cookies) {
       instagram.isRoboTab = false;
