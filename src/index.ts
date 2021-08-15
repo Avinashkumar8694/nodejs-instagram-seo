@@ -34,14 +34,15 @@ const password = process.env.INSTAGRAM_PASSWORD;
   process.on("beforeExit", async () => {
     console.log("beforeExit event");
     await instagramInstance.close();
+    process.exit(0);
   });
-  process.on('SIGINT', async () => {
-    console.log("sigint event");
-    await instagramInstance.close();
-    process.exit();
-  });
-  process.on("exit", async () => {
-    console.log("exit event");
-    await instagramInstance.close();
-  });
-})().catch((err) => console.error(err));
+  // process.on('SIGINT', async () => {
+  //   console.log("sigint event");
+  //   await instagramInstance.close();
+  //   process.exit();
+  // });
+  // process.on("exit", async () => {
+  //   console.log("exit event");
+  //   await instagramInstance.close();
+  // });
+})().catch((err) => {});

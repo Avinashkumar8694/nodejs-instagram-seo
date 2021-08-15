@@ -9,8 +9,9 @@ export class Instagramm {
     page: {},
     isRoboTab: false,
     interval: {},
+    // activeTab: null,
   };
-
+  scrollHeight = 0;
   static getinstance() {
     if (!instagramInstance) {
       instagramInstance = new Instagramm();
@@ -96,16 +97,19 @@ export class Instagramm {
             async function (responseData) {
               let textBody = JSON.parse(responseData);
               if (_that.isValidHttpResponse(textBody)) {
-                _that.scrollPageToBottom(`${tabName}`, false);
+                if (_that.instagram.interval[tabName])
+                  clearInterval(_that.instagram.interval[tabName]);
 
                 await _that.storeData(textBody);
 
-                if (_that.hasNextPage(textBody)) {
-                  _that.scrollPageToBottom(`${tabName}`, true);
-                } else {
-                  _that.scrollPageToBottom(`${tabName}`, false);
-                  _that.instagram.page[tabName].close();
-                }
+                setTimeout(() => {
+                  if (_that.hasNextPage(textBody)) {
+                    _that.scrollPageToBottom(`${tabName}`, true);
+                  } else {
+                    clearInterval(_that.instagram.interval[tabName]);
+                    _that.instagram.page[tabName].close();
+                  }
+                }, 2000);
               }
             },
             (err) => {
@@ -120,7 +124,7 @@ export class Instagramm {
   }
 
   async storeData(textBody) {
-    console.log(JSON.stringify(textBody));
+    // console.log(JSON.stringify(textBody));
   }
 
   isValidHttpResponse(textBody) {
@@ -176,18 +180,20 @@ export class Instagramm {
     }
   }
 
-  scrollPageToBottom(tabName, scroll) {
+  async scrollPageToBottom(tabName, scroll) {
     try {
-      if (!scroll) {
-        clearInterval(this.instagram.interval[tabName]);
-      } else {
-        clearInterval(this.instagram.interval[tabName]);
-        this.instagram.interval[tabName] = setInterval(() => {
-          this.instagram.page[tabName].evaluate(() => {
-            window.scrollTo(0, document.body?.scrollHeight);
-          });
-        }, 1000);
-      }
+      let _that = this;
+      _that.instagram.interval[tabName] = setTimeout(async () => {
+        _that.scrollHeight = await this.instagram.page[tabName].evaluate(
+          (scrollHeight) => {
+            if (scrollHeight < document.body?.scrollHeight) {
+              window.scrollTo(0, document.body?.scrollHeight);
+            }
+            return Promise.resolve(document.body?.scrollHeight);
+          },
+          _that.scrollHeight
+        );
+      }, 1000);
     } catch (err) {
       console.log(err);
     }
@@ -202,13 +208,12 @@ export class Instagramm {
   }
 
   async close() {
+    // clearInterval(this.instagram.interval[this.instagram.activeTab]);
     try {
       Object.keys(this.instagram.page).forEach(async (el) => {
         await this.instagram.page[el].close();
       });
       await this.instagram.browser.close();
-    } catch (err) {
-      console.log(err);
-    }
+    } catch (err) {}
   }
 }
