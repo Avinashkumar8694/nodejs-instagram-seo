@@ -1,4 +1,4 @@
-# nodejs-instagram-seo
+# Capture Instagram data using puppeteer Nodejs
 ## Want to collect Instagram Data? then you are at correct place.
 
 #### This is a basic nodejs tool to collect Instagram post data. This tool usage puppeteer to scrap and get insta data.
